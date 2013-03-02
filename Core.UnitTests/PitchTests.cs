@@ -15,6 +15,7 @@
 using Counterpoint.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 
 namespace Counterpoint.UnitTests
 {
@@ -22,13 +23,13 @@ namespace Counterpoint.UnitTests
     public class PitchTests
     {
         static Random r = new Random();
+        Pitch middleC = new Pitch("C");
 
         [TestMethod]
-        public void PianosWorthOfPitches()
+        public void CheckToStrings()
         {
-            for (int i = 0; i < 89; i++)
+            foreach (Pitch p in AllPitches())
             {
-                Pitch p = new Pitch(i);
                 Console.WriteLine(p.ToString());
             }
         }
@@ -36,17 +37,16 @@ namespace Counterpoint.UnitTests
         [TestMethod]
         public void PitchMiddleC()
         {
-            Pitch middleC = Pitch.MiddleC;
             Assert.AreEqual(4, middleC.Octave);
             Assert.AreEqual("C", middleC.Letter);
-            Assert.AreEqual("C", middleC.ToString());
+            Assert.AreEqual("C", middleC.ScientificNotation);
         }
 
         [TestMethod]
         public void PitchEquals()
         {
-            Pitch p1 = new Pitch(r.Next(89));
-            Pitch p2 = new Pitch(p1.Value);
+            Pitch p1 = RandomPitch();
+            Pitch p2 = new Pitch(p1.ScientificNotation);
             Assert.IsTrue(p1 == p2);
             Assert.IsFalse(p1 != p2);
             Assert.IsTrue(p1.Equals(p2));
@@ -56,8 +56,8 @@ namespace Counterpoint.UnitTests
         [TestMethod]
         public void PitchNotEquals()
         {
-            Pitch p1 = new Pitch(r.Next(89));
-            Pitch p2 = new Pitch(p1.Value + r.Next(1,20));
+            Pitch p1 = RandomPitch();
+            Pitch p2 = p1 + (Interval)r.Next(1,12);
             Assert.IsFalse(p1 == p2);
             Assert.IsTrue(p1 != p2);
             Assert.IsFalse(p1.Equals(p2));
@@ -67,35 +67,32 @@ namespace Counterpoint.UnitTests
         [TestMethod]
         public void PitchEquivalentForUnison()
         {
-            Pitch p1 = new Pitch(r.Next(89));
-            Pitch p2 = new Pitch(p1.Value);
+            Pitch p1 = RandomPitch();
+            Pitch p2 = new Pitch(p1.ScientificNotation);
             Assert.IsTrue(p1.IsEquivalent(p2));
         }
 
         [TestMethod]
         public void PitchEquivalentForOctave()
         {
-            Pitch p1 = new Pitch(r.Next(89));
-            Pitch p2 = new Pitch(p1.Value + 12);
+            Pitch p1 = RandomPitch();
+            Pitch p2 = p1 + Interval.Octave;
             Assert.IsTrue(p1.IsEquivalent(p2));
         }
 
         [TestMethod]
         public void PitchEquivalentRandom()
         {
-            Pitch p1 = new Pitch(r.Next(89));
-            for (int i = 0; i < 89; i++)
-            {
-                Pitch p2 = new Pitch(i);
-                Assert.AreEqual((p2.Value - p1.Value) % 12 == 0, p1.IsEquivalent(p2));
-            }
+            Pitch p1 = RandomPitch();
+            Pitch p2 = RandomPitch();
+            Assert.AreEqual((p2.Value - p1.Value) % 12 == 0, p1.IsEquivalent(p2), p1.ToString() + " " + p2.ToString());
         }
 
         [TestMethod]
         public void PitchCompare()
         {
-            Pitch lower = new Pitch(r.Next(89));
-            Pitch higher = new Pitch(lower.Value + r.Next(1,20));
+            Pitch lower = RandomPitch();
+            Pitch higher = lower + Interval.HalfStep;
 
             Assert.IsTrue(higher > lower);
             Assert.IsFalse(higher < lower);
@@ -104,14 +101,13 @@ namespace Counterpoint.UnitTests
 
             Assert.IsTrue(lower <= higher);
             Assert.IsFalse(lower >= higher);
-            Assert.IsTrue(lower <= new Pitch(lower.Value));
+            Assert.IsTrue(lower <= new Pitch(lower.ScientificNotation));
         }
 
         [TestMethod]
         public void AddingIntervals()
         {
-            Pitch middleC = Pitch.MiddleC;
-            Pitch middleG = Pitch.MiddleC + Interval.Fifth;
+            Pitch middleG = middleC + Interval.Fifth;
             Assert.AreEqual("G", middleG.Letter);
             Assert.AreEqual("", middleG.Accidental);
             Assert.AreEqual(middleC.Octave, middleG.Octave);
@@ -120,8 +116,7 @@ namespace Counterpoint.UnitTests
         [TestMethod]
         public void SubtractingIntervals()
         {
-            Pitch middleC = Pitch.MiddleC;
-            Pitch lowF = Pitch.MiddleC - Interval.Fifth;
+            Pitch lowF = middleC - Interval.Fifth;
             Assert.AreEqual("F", lowF.Letter);
             Assert.AreEqual("", lowF.Accidental);
             Assert.AreEqual(middleC.Octave - 1, lowF.Octave);
@@ -130,11 +125,9 @@ namespace Counterpoint.UnitTests
         [TestMethod]
         public void CalculateIntervals()
         {
-            Pitch p1 = new Pitch(r.Next(89));
-            for (int v2 = 0; v2 < 89; v2++)
+            Pitch p1 = RandomPitch();
+            foreach (Pitch p2 in AllPitches())
             {
-                Pitch p2 = new Pitch(v2);
-
                 Interval i = p1.IntervalTo(p2);
 
                 if (p1 == p2)
@@ -151,7 +144,97 @@ namespace Counterpoint.UnitTests
                 }
                 else
                 {
-                    Assert.IsTrue(p1.IsEquivalent(p2 + i));
+                    Pitch p2plusI = p2 + i;
+                    Assert.IsTrue(p1.IsEquivalent(p2plusI), "p1: " + p1.ToString() + " p2: " + p2.ToString() + " i: " + i.ToString() + " p2plusI: " + p2plusI);
+                }
+            }
+        }
+
+        private IEnumerable<Pitch> AllPitches()
+        {
+            for (int octaveIndex = 0; octaveIndex < ValidOctaves.Length; octaveIndex++)
+            {
+                for (int letterIndex = 0; letterIndex < ValidLetters.Length; letterIndex++)
+                {
+                    for (int accidentalIndex = 0; accidentalIndex < ValidAccidentals.Length; accidentalIndex++)
+                    {
+                        yield return new Pitch(ValidLetters[letterIndex] + ValidAccidentals[accidentalIndex] + ValidOctaves[octaveIndex]);
+                    }
+                }
+            }
+        }
+
+        [TestMethod]
+        public void ValidPitchNotation()
+        {
+            Assert.IsTrue(Pitch.IsValidScientificNotation("C"));
+            Assert.IsTrue(Pitch.IsValidScientificNotation("A#"));
+            Assert.IsTrue(Pitch.IsValidScientificNotation("Gb3"));
+            Assert.IsTrue(Pitch.IsValidScientificNotation("F4"));
+        }
+
+        [TestMethod]
+        public void InvalidPitchNotation()
+        {
+            Assert.IsFalse(Pitch.IsValidScientificNotation(""));
+            Assert.IsFalse(Pitch.IsValidScientificNotation("A##"));
+            Assert.IsFalse(Pitch.IsValidScientificNotation("3Gb"));
+            Assert.IsFalse(Pitch.IsValidScientificNotation("FC"));
+        }
+
+        [TestMethod]
+        public void PitchNotationCaseInsensitive()
+        {
+            Pitch p = new Pitch("C");
+            Pitch p2 = new Pitch("c");
+            Assert.AreEqual(p, p2);
+        }
+
+        [TestMethod]
+        public void CIsSameAsMiddleCIsSameAsC4()
+        {
+            Pitch p = new Pitch("C");
+            Pitch p1 = new Pitch("C4");
+            Assert.AreEqual(middleC, p);
+            Assert.AreEqual(middleC, p1);
+        }
+
+        string[] ValidLetters = new[] { "C", "D", "E", "F", "G", "A", "B" };
+        string[] ValidAccidentals = new[] { "b", "", "#" };
+        string[] ValidOctaves = new[] { "0", "1", "2", "3", "4", "", "5", "6", "7" };
+
+        private Pitch RandomPitch()
+        {
+            string letter = ValidLetters[r.Next(ValidLetters.Length)];
+            string accidental = ValidAccidentals[r.Next(ValidAccidentals.Length)];
+            string octave = ValidOctaves[r.Next(ValidOctaves.Length)];
+
+            return new Pitch(letter + accidental + octave);
+        }
+
+
+        [TestMethod]
+        public void CreateAllPitchesWithNotation()
+        {
+            for (int octave = 0; octave < 7; octave++)
+            {
+                for (int letterIndex = 0; letterIndex < ValidLetters.Length; letterIndex++)
+                {
+                    string naturalPitch = ValidLetters[letterIndex] + octave.ToString();
+                    string sharpPitch = ValidLetters[letterIndex] + "#" + octave.ToString();
+                    string flatPitch = ValidLetters[letterIndex] + "b" + octave.ToString();
+
+                    Pitch natural = new Pitch(naturalPitch);
+                    Pitch sharp = new Pitch(sharpPitch);
+                    Pitch flat = new Pitch(flatPitch); 
+
+                    Assert.AreEqual(1, natural.Value - flat.Value);
+                    Assert.AreEqual(1, sharp.Value - natural.Value);
+
+                    Pitch naturalLower = new Pitch(naturalPitch.ToLowerInvariant());
+                    Assert.AreEqual(natural, naturalLower);
+                    Pitch sharpLower = new Pitch(sharpPitch.ToLowerInvariant());
+                    Assert.AreEqual(sharp, sharpLower);
                 }
             }
         }

@@ -13,36 +13,60 @@
    limitations under the License.  */
 
 using System;
+using System.Text.RegularExpressions;
 
 namespace Counterpoint.Core
 {
     public class Pitch : IComparable, IComparable<Pitch>
     {
-        // TODO: flats not supported yet.
-        private string[,] LettersAndAccidentals = new[,] { 
-                {"C", "" },
-                {"C", "#"},
-                {"D", "" },
-                {"D", "#"},
-                {"E", "" },
-                {"F", "" },
-                {"F", "#"},
-                {"G", "" },
-                {"G", "#"},
-                {"A", "" },
-                {"A", "#"},
-                {"B", "" }
-            };
-
-        // TODO: override that handles sharps and flats, distinguishes between C# and Db, etc.
-        public Pitch(int value)
+        private Pitch(int value)
         {
             Octave = value / 12;
             Value = value;
 
             int pitchWithinOctave = value % 12;
-            Letter = LettersAndAccidentals[pitchWithinOctave, 0];
-            Accidental = LettersAndAccidentals[pitchWithinOctave, 1];
+            char letter = lettersInOrder[pitchWithinOctave];
+            if (letter == ' ')
+            {
+                letter = lettersInOrder[pitchWithinOctave - 1];
+                Accidental = "#";
+            }
+            else
+            {
+                Accidental = "";
+            }
+            Letter = new string(letter,1);
+
+            ScientificNotation = Letter + Accidental + (Octave == 4 ? "" : Octave.ToString());
+        }
+
+        static char[] lettersInOrder = "C D EF G A B".ToCharArray();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="note">[letter][accidental][octave] where letter is a,b,c, etc and is case insensitive.  Accidental is '#' or 'b' or absent.  Octave is a number, or if omitted assume this is octave 4, which begins with middle C.</param>
+        public Pitch(string note)
+        {
+            Match m = ValidPitchMatcher.Match(note);
+            if (m.Success)
+            {
+                string rawOctave = m.Groups["octave"].Value;
+                Octave = string.IsNullOrWhiteSpace(rawOctave) ? 4 : int.Parse(rawOctave);
+                Letter = m.Groups["letter"].Value.ToUpperInvariant();
+                Accidental = m.Groups["accidental"].Value;
+                Value = Array.IndexOf(lettersInOrder,Letter[0]) + (12 * Octave);
+                if (Accidental == "#")
+                {
+                    Value += 1;
+                }
+                else if (Accidental == "b")
+                {
+                    Value -= 1;
+                }
+
+                ScientificNotation = Letter + Accidental + (Octave == 4 ? "" : Octave.ToString());
+            }
         }
 
         /// <summary>
@@ -71,10 +95,8 @@ namespace Counterpoint.Core
         /// <returns></returns>
         public override string ToString()
         {
-            return Letter + Accidental + (Octave == 4 ? "" : Octave.ToString());
+            return ScientificNotation + " (" + Value + ")";
         }
-
-        public static readonly Pitch MiddleC = new Pitch(4 * 12);
 
         #region equals overrides
         public override bool Equals(object obj)
@@ -205,8 +227,21 @@ namespace Counterpoint.Core
 
         public bool IsEquivalent(Pitch other)
         {
+            if (other == null) return false;
+
+            int totalDifference = Math.Abs(Value - other.Value);
+            return totalDifference % 12 == 0;
             // TODO: what should we do if this pitch is D# and the other pitch is Eb?  Depends how this is used.
-            return (other != null && other.Letter == Letter && other.Accidental == Accidental);
+            //  currently returns true.
         }
+
+        const string ValidPitchPattern = @"^(?<letter>[a-gA-G])(?<accidental>[#b]?)(?<octave>\d*)$";
+        static readonly Regex ValidPitchMatcher = new Regex(ValidPitchPattern, RegexOptions.Compiled);
+        public static bool IsValidScientificNotation(string note)
+        {
+            return ValidPitchMatcher.IsMatch(note);
+        }
+
+        public string ScientificNotation { get; private set; }
     }
 }

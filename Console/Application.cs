@@ -13,6 +13,7 @@
    limitations under the License.  */
 
 using Counterpoint.Core;
+using Counterpoint.Core.Rules;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,14 +26,14 @@ namespace Counterpoint.ConsoleApp
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine("Enter cantus firmus, with spaces between notes.  Type x after the last note.");
+            Console.WriteLine("Enter a line of music, with spaces between notes.  Type x or hit enter after the last note.");
 
-            LineBuilder cantusFirmusBuilder = new LineBuilder();
-            while (!cantusFirmusBuilder.Complete)
+            LineBuilder lineBuilder = new LineBuilder();
+            while (!lineBuilder.Complete)
             {
                 try
                 {
-                    cantusFirmusBuilder.Add(Console.ReadKey().KeyChar);
+                    lineBuilder.Add(Console.ReadKey().KeyChar);
                 }
                 catch (InvalidNoteException ine)
                 {
@@ -42,21 +43,40 @@ namespace Counterpoint.ConsoleApp
             }
 
             Console.WriteLine();
-            Console.Write("That completes the cantus firmus.  For now, I only support two-part counterpoint, first species.  ");
-            Console.Write("Write a line to go above or below the cantus firmus.  Type a for above, b for below: ");
-            int cantusFirmusPosition = -1;
-            while (cantusFirmusPosition < 0)
+
+            // TODO: refactor, perhaps so I can do something like:
+            //    RulesResult rr = Rules.SingleLine.Validate(lineBuilder.Pitches);
+
+            RuleSet rules = new RuleSet();
+
+            rules.Validate(lineBuilder.Pitches);
+
+            if (rules.Valid)
             {
-                char choice = Console.ReadKey().KeyChar;
-                if (choice == 'a')
+                Console.WriteLine("Success!  Congratulations.");
+            }
+            else
+            {
+                if (rules.Errors.Count() > 0)
                 {
-                    cantusFirmusPosition = 0;
+                    Console.WriteLine("Errors:");
+                    foreach (CounterpointError error in rules.Errors)
+                    {
+                        Console.WriteLine(error.ToString());
+                    }
                 }
-                else if (choice == 'b')
+                if (rules.Warnings.Count() > 0)
                 {
-                    cantusFirmusPosition = 1;
+                    Console.WriteLine("Warnings:");
+                    foreach (CounterpointError warning in rules.Warnings)
+                    {
+                        Console.WriteLine(warning.ToString());
+                    }
                 }
             }
-        }
+
+            Console.WriteLine("press any key to exit.");
+            Console.ReadKey();
+        } 
     }
 }

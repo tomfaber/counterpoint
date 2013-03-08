@@ -50,6 +50,8 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="CounterpointErrorTests.cs" />
+    <Compile Include="LineRuleTests.cs" />
     <Compile Include="LineBuilderTests.cs" />
     <Compile Include="PitchTests.cs" />
   </ItemGroup>

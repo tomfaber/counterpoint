@@ -238,5 +238,32 @@ namespace Counterpoint.UnitTests
                 }
             }
         }
+
+        [TestMethod]
+        public void SubtractPitches()
+        {
+            Pitch p1 = new Pitch("E");
+            Pitch p2 = new Pitch("C");
+            Interval i = p1 - p2;
+            Assert.AreEqual(Interval.MajorThird, i);
+        }
+
+        [TestMethod]
+        public void SubtractPitchesOctave()
+        {
+            Pitch p1 = new Pitch("E3");
+            Pitch p2 = new Pitch("E");
+            Interval i = p1 - p2;
+            Assert.AreEqual(Interval.Octave, i);
+        }
+
+        [TestMethod]
+        public void SubtractPitchesUnison()
+        {
+            Pitch p1 = new Pitch("Gb");
+            Pitch p2 = new Pitch("Gb");
+            Interval i = p1 - p2;
+            Assert.AreEqual(Interval.Unison, i);
+        }
     }
 }

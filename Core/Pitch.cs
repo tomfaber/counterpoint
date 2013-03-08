@@ -210,6 +210,15 @@ namespace Counterpoint.Core
         {
             return new Pitch(start.Value - (int)interval);
         }
+        public static Interval operator -(Pitch start, Pitch end)
+        {
+            int i = Math.Abs(start.Value - end.Value);
+            if (i == 12)
+            {
+                return Interval.Octave;
+            }
+            return (Interval)(i % 12);
+        }
         #endregion
 
         public Interval IntervalTo(Pitch other)

@@ -43,6 +43,10 @@
     <Compile Include="InvalidNoteException.cs" />
     <Compile Include="LineBuilder.cs" />
     <Compile Include="Pitch.cs" />
+    <Compile Include="RuleSet.cs" />
+    <Compile Include="Rules\CounterpointError.cs" />
+    <Compile Include="Rules\CounterpointErrorLevel.cs" />
+    <Compile Include="Rules\LineRule.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
